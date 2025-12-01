@@ -158,11 +158,20 @@ echo "$(cat db_connection.txt)"
 # Apply schema if present
 if [ -f "schema.sql" ]; then
     echo ""
-    echo "Applying schema.sql to ${DB_NAME}..."
-    if sudo -u postgres ${PG_BIN}/psql -p ${DB_PORT} -d ${DB_NAME} -f schema.sql > /dev/null 2>&1; then
+    echo "Applying schema.sql to ${DB_NAME} as user ${DB_USER}..."
+    # Use the created app user to apply the schema, with password
+    if PGPASSWORD=${DB_PASSWORD} ${PG_BIN}/psql -p ${DB_PORT} -U ${DB_USER} -d ${DB_NAME} -f schema.sql; then
         echo "✓ Schema applied successfully"
+        
+        # Verify table creation
+        TABLE_COUNT=$(PGPASSWORD=${DB_PASSWORD} ${PG_BIN}/psql -p ${DB_PORT} -U ${DB_USER} -d ${DB_NAME} -t -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';" | xargs)
+        if [ "$TABLE_COUNT" -gt 0 ]; then
+            echo "✓ Verification complete: Found ${TABLE_COUNT} tables in database."
+        else
+            echo "⚠ Verification failed: No tables found after applying schema."
+        fi
     else
-        echo "⚠ Failed to apply schema.sql (check SQL and permissions)"
+        echo "⚠ Failed to apply schema.sql (check SQL, user permissions, and connectivity)"
     fi
 else
     echo ""
@@ -171,12 +180,14 @@ fi
 
 # Apply seed data if present
 if [ -f "seeds.sql" ]; then
-    echo "Applying seeds.sql to ${DB_NAME}..."
-    if sudo -u postgres ${PG_BIN}/psql -p ${DB_PORT} -d ${DB_NAME} -f seeds.sql > /dev/null 2>&1; then
+    echo ""
+    echo "Applying seeds.sql to ${DB_NAME} as user ${DB_USER}..."
+    if PGPASSWORD=${DB_PASSWORD} ${PG_BIN}/psql -p ${DB_PORT} -U ${DB_USER} -d ${DB_NAME} -f seeds.sql; then
         echo "✓ Seed data applied successfully"
     else
         echo "⚠ Failed to apply seeds.sql (check SQL and permissions)"
     fi
 else
+    echo ""
     echo "No seeds.sql found, skipping seed step."
 fi
