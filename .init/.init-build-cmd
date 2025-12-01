@@ -1,0 +1,4 @@
+{
+    "command": "chmod +x startup.sh && sudo ./startup.sh &",
+    "working_directory": "/home/kavia/workspace/code-generation/resume-analyzer-and-job-matcher-214036-214045/resume_app_database"
+}
